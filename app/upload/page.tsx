@@ -113,6 +113,10 @@ export default function UploadPage() {
 
       const data = await res.json();
       if (data.report_id) {
+        if (data.report && typeof window !== 'undefined') {
+          localStorage.setItem(`report_${data.report_id}`, JSON.stringify(data.report));
+          localStorage.setItem('latest_report', JSON.stringify(data.report));
+        }
         router.push(`/report/${data.report_id}`);
       } else {
         throw new Error('No report ID returned.');

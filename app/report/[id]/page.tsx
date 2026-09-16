@@ -27,23 +27,58 @@ import {
 export default function ReportPage() {
   const params = useParams();
   const id = params?.id as string;
-  const [report, setReport] = useState<ResearchIntegrityReport | null>(SYNTHETIC_DEMO_REPORT);
+  const [report, setReport] = useState<ResearchIntegrityReport | null>(null);
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SPLIT' | 'SIMILARITY' | 'CITATIONS' | 'REFERENCES' | 'CLAIMS' | 'CONSISTENCY' | 'INDICATORS'>('OVERVIEW');
 
   useEffect(() => {
-    // If ID is demo report or fetch from store
+    if (!id) return;
+
     if (id === 'demo-report-2026-001') {
       setReport(SYNTHETIC_DEMO_REPORT);
-    } else if (typeof window !== 'undefined') {
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
       const cached = localStorage.getItem(`report_${id}`);
       if (cached) {
         try {
           setReport(JSON.parse(cached));
+          return;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      const latest = localStorage.getItem('latest_report');
+      if (latest) {
+        try {
+          const parsed = JSON.parse(latest);
+          if (parsed.report_id === id || parsed.document?.id === id) {
+            setReport(parsed);
+            return;
+          }
         } catch (e) {
           console.error(e);
         }
       }
     }
+
+    // Attempt API fetch if not in local storage
+    fetch(`/api/report/${id}`)
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error('Report API fetch failed');
+      })
+      .then((data) => {
+        if (data && data.report_id) {
+          setReport(data);
+        } else {
+          setReport(SYNTHETIC_DEMO_REPORT);
+        }
+      })
+      .catch(() => {
+        setReport(SYNTHETIC_DEMO_REPORT);
+      });
   }, [id]);
 
   if (!report) {
